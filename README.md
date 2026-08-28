@@ -1,142 +1,124 @@
-# Image Quality & Defect Detection System
+# Image Quality and Defect Detection System
 
-A full-stack, AI-powered application for automated visual defect detection, explainable image quality scoring, and spatial defect localization. Designed specifically to run efficiently on low-resource hardware (CPU-only, 8GB RAM) with **zero external API dependencies**.
-
----
-
-## 📌 Executive Summary & Architecture Rationale
-
-This project addresses visual defect classification (Blur, Underexposure, Overexposure, Noise, JPEG Blockiness Corruption) without requiring heavy CUDA/GPU infrastructure or multi-gigabyte neural network weights.
-
-- **Hybrid Classical CV + Learned Ensemble:** Uses OpenCV to extract engineered quality features (Laplacian variance, Tenengrad magnitude, FFT blur ratios, shadow/highlight clipping %, noise residual variance, Immerkaer noise estimation, and 8x8 DCT blockiness index).
-- **ML-First Inference:** Trains a Random Forest multi-issue ensemble + Gradient Boosting overall classifier on top of extracted feature vectors. Model footprint is **< 3 MB** and executes inference in **< 15ms per image** on CPU.
-- **Explainable AI & Spatial Heatmaps:** Provides human-readable decision rationales alongside an 8x8 spatial defect localization heatmap overlaying low-quality image regions.
-- **Leakage-Free Multi-Distribution Evaluation:** Evaluates model performance across both unseen synthetic test splits and an independent real-world photographic holdout dataset cached locally in the repository.
+A full-stack AI-powered application for automated image quality assessment, defect classification, and spatial defect localization. Built to run on CPU-only, low-resource hardware, with no dependency on external AI or vision APIs.
 
 ---
 
-## 🧠 Model Decision Architecture
+## Executive Summary
 
-The inference engine (`backend/ml_engine.py`) follows a **Hybrid ML-First + Safety Net** paradigm:
+This system performs automated visual quality assessment and defect classification (blur, underexposure, overexposure, noise, and JPEG blockiness corruption) using a hybrid classical computer vision and machine learning pipeline, without requiring GPU infrastructure or large pretrained neural network weights.
 
-1. **Primary Decision Signal (Machine Learning):**
-   - Individual Random Forest binary classifiers predict defect probability ($P_{ml}$) for each defect class.
-   - An issue is primarily detected if **$P_{ml} \ge 0.50$**.
-2. **Safety Net Fallback (Documented Physical Bounds):**
-   - Raw feature metrics act strictly as a safety net for extreme out-of-distribution edge cases (e.g. completely pitch-black images with luminance $< 15.0$, pure white blown-out pixels with luminance $> 245.0$, or unreadable bitstream corruptions).
-   - Prevents zero-shot false negatives while preventing hand-tuned rules from overriding learned model patterns.
+- **Hybrid classical CV and learned ensemble.** OpenCV is used to extract engineered quality features: Laplacian variance, Tenengrad gradient magnitude, FFT-based blur ratio, shadow and highlight clipping percentage, noise residual variance, Immerkaer noise estimation, and an 8x8 DCT blockiness index.
+- **ML-first inference.** A Random Forest ensemble (per-issue binary classifiers) and a Gradient Boosting classifier (overall quality label) operate on the extracted feature vectors. Model footprint is under 3 MB, with inference latency under 15 ms per image on CPU.
+- **Explainability and spatial localization.** The system produces human-readable decision rationales and an 8x8 spatial heatmap localizing the image regions contributing to a detected defect.
+- **Leakage-free, multi-distribution evaluation.** Model performance is reported separately on an unseen synthetic test split and an independent real-world photographic holdout set, with the holdout images committed to the repository to keep evaluation reproducible offline.
 
 ---
 
-## 🏗️ System Architecture
+## Model Decision Architecture
+
+The inference engine (`backend/ml_engine.py`) follows a hybrid ML-first architecture with a documented safety-net fallback:
+
+1. **Primary decision signal (machine learning).** Independent Random Forest binary classifiers estimate a defect probability, P(ml), for each issue class. An issue is primarily flagged when P(ml) >= 0.50.
+2. **Safety-net fallback (documented physical bounds).** Raw feature thresholds act only as a safety net for extreme out-of-distribution cases — for example, near-zero luminance (< 15.0), fully saturated highlights (> 245.0), or unreadable/corrupted bitstreams. This prevents zero-shot false negatives on extreme inputs without allowing hand-tuned rules to override the learned model on ordinary images.
+
+---
+
+## System Architecture
 
 ```
 +-----------------------------------------------------------------------------------+
-|                                 REACT + VITE FRONTEND                             |
-|  - Dark Glassmorphic Interface & Interactive Radial Score Gauge                   |
-|  - Drag & Drop Image Upload with Client-Side MIME / Size Validation               |
-|  - Spatial Defect Heatmap Overlay Toggle (8x8 Grid Patch Localization)            |
-|  - Paginated History Explorer with SQLite Result Synchronization                 |
+|                              REACT + VITE FRONTEND                                |
+|  - Image upload with client-side MIME and size validation                        |
+|  - Interactive quality score display and detected-issue breakdown                |
+|  - Spatial defect heatmap overlay (8x8 grid patch localization)                  |
+|  - Paginated analysis history view                                               |
 +----------------------------------------+------------------------------------------+
-                                         | REST API (HTTP / JSON / FormData)
-                                         v
+                                          | REST API (HTTP / JSON / FormData)
+                                          v
 +-----------------------------------------------------------------------------------+
-|                               FASTAPI BACKEND SERVICE                             |
-|  - POST /api/analyze         (Validation, Feature Extraction, Inference, Heatmap) |
-|  - GET  /api/analyses        (Paginated analysis history)                         |
-|  - GET  /api/analyses/{id}   (Single record & dynamic heatmap retrieval)          |
-|  - GET  /api/images/{id}     (Disk storage image stream)                          |
-|  - GET  /api/health          (Engine status check)                                |
+|                             FASTAPI BACKEND SERVICE                               |
+|  - POST /api/analyze         Validation, feature extraction, inference, heatmap  |
+|  - GET  /api/analyses        Paginated analysis history                          |
+|  - GET  /api/analyses/{id}   Single record and heatmap retrieval                 |
+|  - GET  /api/images/{id}     Stored image retrieval                              |
+|  - GET  /api/health          Service and model status check                      |
 +--------------------+-----------------------------------+--------------------------+
-                     |                                   |
-                     v                                   v
+                      |                                   |
+                      v                                   v
 +------------------------------------+   +------------------------------------------+
-|       ML FEATURE & INFERENCE       |   |             SQLITE DATABASE              |
-|  - Feature Extractor (OpenCV)      |   |  - SQLAlchemy ORM                        |
-|  - Random Forest Classifiers       |   |  - Persists analysis records, stats,    |
-|  - Defect Heatmap Overlay Generator|   |    issues JSON, and saved file paths      |
+|      ML FEATURE AND INFERENCE      |   |              SQLITE DATABASE             |
+|  - Feature extraction (OpenCV)     |   |  - SQLAlchemy ORM                        |
+|  - Random Forest / Gradient        |   |  - Persists analysis records, image      |
+|    Boosting classifiers            |   |    statistics, detected issues, and      |
+|  - Defect heatmap generator        |   |    stored file references                |
 +------------------------------------+   +------------------------------------------+
 ```
 
 ---
 
-## 🛠️ Tech Stack & Dependencies
+## Tech Stack
 
-- **Backend:** FastAPI, PyTest, HTTPX, SQLAlchemy, Pydantic v2, Uvicorn
-- **ML Engine:** OpenCV (`opencv-python-headless`), scikit-learn, NumPy, Matplotlib, Joblib
-- **Frontend:** React 19, Vite 8, Vitest, React Testing Library, Lucide Icons, Vanilla CSS
-- **CI / Containerization:** GitHub Actions, Docker, Docker Compose, Nginx
+- **Backend:** FastAPI, Pytest, HTTPX, SQLAlchemy, Pydantic v2, Uvicorn
+- **ML Engine:** OpenCV (opencv-python-headless), scikit-learn, NumPy, Matplotlib, Joblib
+- **Frontend:** React 19, Vite, Vitest, React Testing Library
+- **CI / Deployment:** GitHub Actions, Docker, Docker Compose, Nginx
 
 ---
 
-## 🚀 Quickstart & Setup Instructions
+## Setup Instructions
 
 ### Option A: Local Development
 
-#### 1. Backend Setup
+**Backend**
 ```bash
-# Install backend Python dependencies
 pip install -r requirements.txt
-
-# Start FastAPI backend server
 python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
-Backend runs at `http://127.0.0.1:8000`. Interactive Swagger API Docs available at `http://127.0.0.1:8000/docs`.
+The backend runs at `http://127.0.0.1:8000`; interactive API documentation is available at `http://127.0.0.1:8000/docs`.
 
-#### 2. Frontend Setup
+**Frontend**
 ```bash
-# Navigate to frontend directory
 cd frontend
-
-# Install Node dependencies
 npm install
-
-# Start Vite dev server
 npm run dev
 ```
-Frontend runs at `http://localhost:5173`.
+The frontend runs at `http://localhost:5173`.
 
----
-
-### Option B: Docker Compose Deployment
+### Option B: Docker Compose
 
 ```bash
 docker compose up --build -d
 ```
-- **Frontend Web App:** `http://localhost`
-- **Backend API:** `http://localhost:8000`
+- Frontend: `http://localhost`
+- Backend API: `http://localhost:8000`
 
-*Note on Container Testing:* Deployment tested via manual review of Docker configuration; not smoke-tested with a local Docker daemon due to environment constraints.
+Note: the Docker configuration has been manually reviewed for correctness (base images, exposed ports, environment variables, inter-service networking), but has not been smoke-tested against a local Docker daemon due to environment constraints on the development machine used for this submission.
 
 ---
 
-## 🔁 How to Reproduce Our Exact Evaluation Numbers
+## Reproducing the Reported Evaluation Results
 
-To reproduce the exact evaluation metrics (`metrics.json` and `evaluation_report.md`) from a clean offline clone without requiring internet access:
+The evaluation metrics in `metrics.json` and `evaluation_report.md` can be reproduced from a clean clone without internet access:
 
 ```bash
-# Step 1: Generate procedural splits & load committed real-world source photos
-python ml/generate_dataset.py
-
-# Step 2: Train Random Forest classifiers & overall ensemble
-python ml/train.py
-
-# Step 3: Run comprehensive dual-distribution evaluation
-python ml/evaluate.py
+python ml/generate_dataset.py   # generate procedural splits; load committed real-world source photos
+python ml/train.py              # train the Random Forest / Gradient Boosting ensemble
+python ml/evaluate.py           # run the dual-distribution evaluation
 ```
 
-*Note on Data Provenance:* The 30 clean base photographs for the real-world holdout dataset are committed directly to `ml/dataset/real_holdout_source/` (sourced from Unsplash, free to use per the Unsplash license). This ensures dataset generation executes deterministically offline without silent network fallbacks.
+The 30 base photographs used for the real-world holdout set are committed under `ml/dataset/real_holdout_source/` (sourced from Unsplash, used under its free-to-use license). Committing these images ensures dataset generation and evaluation are deterministic and reproducible offline, with no silent fallback to synthetic substitutes.
 
 ---
 
-## 🧪 Automated Testing Suite
+## Automated Testing
 
-### Backend Pytest Suite
+**Backend**
 ```bash
 python -m pytest backend/tests
 ```
 
-### Frontend Vitest Suite
+**Frontend**
 ```bash
 cd frontend
 npm test
@@ -144,34 +126,37 @@ npm test
 
 ---
 
-## 📈 Model Evaluation & Empirical Results
+## Model Evaluation and Results
 
-The system is evaluated across two distinct datasets to eliminate data leakage and assess genuine domain generalization:
+Model performance is reported on two independent datasets to eliminate data leakage and assess genuine generalization:
 
-1. **Unseen Synthetic Test Split (800 samples):** Generated using separate random seed ranges (`5000+`) across 20 distinct procedural base pattern families.
-2. **Real-World Holdout Set (480 samples):** Real photographs sourced from Unsplash subjected to controlled degradations.
+1. **Unseen synthetic test split (800 samples).** Generated from a disjoint random seed range (5000+) across 20 distinct procedural base pattern families, with no overlap with the training seed range.
+2. **Real-world holdout set (480 samples).** Genuine photographs sourced from Unsplash, subjected to controlled, labeled degradations.
 
-### Generalization Metrics Summary
+### Generalization Summary
 
-| Defect Category | Synthetic Test Acc | Synthetic F1 | Real Holdout Acc | Real Holdout F1 |
+| Defect Category | Synthetic Test Acc. | Synthetic F1 | Real Holdout Acc. | Real Holdout F1 |
 | --- | --- | --- | --- | --- |
-| **Blur** | 98.8% | 96.6% | 99.2% | 97.8% |
-| **Underexposure** | 98.6% | 96.2% | 93.1% | 83.1% |
-| **Overexposure** | 98.8% | 96.6% | 90.8% | 67.6% |
-| **Noise** | 100.0% | 100.0% | 100.0% | 100.0% |
-| **Corruption / Blockiness** | 98.4% | 95.8% | 98.3% | 95.3% |
+| Blur | 98.8% | 96.6% | 99.2% | 97.8% |
+| Underexposure | 98.6% | 96.2% | 93.1% | 83.1% |
+| Overexposure | 98.8% | 96.6% | 90.8% | 67.6% |
+| Noise | 100.0% | 100.0% | 100.0% | 100.0% |
+| Corruption / Blockiness | 98.4% | 95.8% | 98.3% | 95.3% |
 
-- **Overall Synthetic Test Accuracy:** **92.38%** (800 samples)
-- **Overall Real-World Holdout Accuracy:** **85.00%** (480 samples)
-- **Real-World Dataset Provenance:** **30/30 genuine photographs** (0 synthetic fallbacks)
+- Overall synthetic test accuracy: **92.38%** (800 samples)
+- Overall real-world holdout accuracy: **85.00%** (480 samples)
+- Real-world dataset provenance: **30/30 genuine photographs**, 0 synthetic fallbacks
 
 ---
 
-## ⚠️ Known Limitations & Honesty Note
+## Limitations
 
-1. **Synthetic-to-Real Domain Gap:**
-   Model accuracy on synthetic test splits (**92.38%**) exceeds accuracy on real photographic holdouts (**85.00%**). Procedural data generation provides exact ground-truth boundaries, whereas real photographs feature complex scene textures, organic shadows, and non-uniform lens aberrations that create feature distribution shifts.
-2. **Per-Class Error Analysis (Overexposure):**
-   Real photographic scenes containing bright background skies or specular reflections introduce high mean luminance without highlight clipping. When subjected to light overexposure, feature overlap occurs with clean photographic scenes.
-3. **High-Frequency Background Textures:**
-   Dense photographic elements (such as foliage or architectural brickwork) introduce high spatial variance in raw Laplacian calculations, requiring the ML classifier probability ($P_{ml} \ge 0.50$) to filter false positive blur calls.
+1. **Synthetic-to-real domain gap.** Accuracy on the synthetic test split (92.38%) exceeds accuracy on the real-world holdout (85.00%). Procedural generation produces exact, noise-free ground-truth boundaries, while real photographs introduce complex scene texture, non-uniform shadow structure, and organic lens aberration that shift the feature distribution away from the training data.
+2. **Overexposure is the weakest category on real photographs.** Real scenes with bright skies or specular highlights can register high mean luminance without severe highlight clipping, causing feature overlap with clean images under moderate overexposure; under severe overexposure, flat saturated regions are occasionally misclassified as JPEG block corruption by the blockiness estimator.
+3. **Dense high-frequency textures can inflate raw blur-related statistics.** Backgrounds such as foliage or brickwork raise raw Laplacian variance independent of actual sharpness, which is why the ML classifier probability (rather than the raw statistic alone) is used as the primary blur-detection signal.
+
+---
+
+## License and Attribution
+
+Real-world holdout images sourced from Unsplash, used under the Unsplash license (free to use, attribution not required).
