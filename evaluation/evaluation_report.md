@@ -27,7 +27,7 @@
 
 ### Honest Gap Interpretation
 - **Same-Distribution Accuracy (92.4%):** On synthetic test images generated procedurally, the model achieves high accuracy as feature signatures (Laplacian variance, blockiness index, noise variance) closely mirror synthetic training distributions.
-- **Real-World Generalization (85.0%):** On genuine photographic images sourced from public datasets (Unsplash/COCO), performance shows a slight domain shift. Real-world scene textures, natural high dynamic ranges, and organic lens blur introduce complex edge frequencies that differ from synthetic noise profiles.
+- **Real-World Generalization (85.0%):** On genuine photographic images sourced from Unsplash, performance shows a slight domain shift. Real-world scene textures, natural high dynamic ranges, and organic lens blur introduce complex edge frequencies that differ from synthetic noise profiles.
 
 ## 4. Per-Class Error Analysis (Overexposure Focus)
 
@@ -47,4 +47,4 @@ To verify whether classifier confidence probability ($P_{ml}$) reflects genuine 
 | **Moderate Confidence [0.70 - 0.85)** | 17 | 77.9% | 47.1% |
 | **Low Confidence [0.50 - 0.70)** | 41 | 60.6% | 39.0% |
 
-*Conclusion:* Model confidence exhibits strong monotonic calibration — high-confidence predictions ($\ge 85\%$) correlate with 90%+ empirical accuracy, confirming that raw probability outputs provide reliable risk assessment for human reviewers.
+*Conclusion:* Model confidence exhibits strong monotonic calibration — high-confidence predictions (>= 85%) correlate with 90%+ empirical accuracy, confirming that raw probability outputs provide reliable risk assessment for human reviewers.

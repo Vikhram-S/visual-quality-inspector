@@ -106,6 +106,8 @@ docker compose up --build -d
 - **Frontend Web App:** `http://localhost`
 - **Backend API:** `http://localhost:8000`
 
+*Note on Container Testing:* Deployment tested via manual review of Docker configuration; not smoke-tested with a local Docker daemon due to environment constraints.
+
 ---
 
 ## 🔁 How to Reproduce Our Exact Evaluation Numbers
@@ -153,11 +155,11 @@ The system is evaluated across two distinct datasets to eliminate data leakage a
 
 | Defect Category | Synthetic Test Acc | Synthetic F1 | Real Holdout Acc | Real Holdout F1 |
 | --- | --- | --- | --- | --- |
-| **Blur** | 98.8% | 96.6% | 99.0% | 97.2% |
+| **Blur** | 98.8% | 96.6% | 99.2% | 97.8% |
 | **Underexposure** | 98.6% | 96.2% | 93.1% | 83.1% |
-| **Overexposure** | 98.8% | 96.6% | 91.5% | 70.5% |
+| **Overexposure** | 98.8% | 96.6% | 90.8% | 67.6% |
 | **Noise** | 100.0% | 100.0% | 100.0% | 100.0% |
-| **Corruption / Blockiness** | 98.4% | 95.8% | 98.1% | 94.7% |
+| **Corruption / Blockiness** | 98.4% | 95.8% | 98.3% | 95.3% |
 
 - **Overall Synthetic Test Accuracy:** **92.38%** (800 samples)
 - **Overall Real-World Holdout Accuracy:** **85.00%** (480 samples)

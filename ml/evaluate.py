@@ -221,7 +221,7 @@ def run_evaluation():
         f.write("## 3. Generalization & Synthetic-vs-Real Gap Analysis\n\n")
         f.write("### Honest Gap Interpretation\n")
         f.write(f"- **Same-Distribution Accuracy ({synth_results['overall_accuracy']*100:.1f}%):** On synthetic test images generated procedurally, the model achieves high accuracy as feature signatures (Laplacian variance, blockiness index, noise variance) closely mirror synthetic training distributions.\n")
-        f.write(f"- **Real-World Generalization ({real_results['overall_accuracy']*100:.1f}%):** On genuine photographic images sourced from public datasets (Unsplash/COCO), performance shows a slight domain shift. Real-world scene textures, natural high dynamic ranges, and organic lens blur introduce complex edge frequencies that differ from synthetic noise profiles.\n\n")
+        f.write(f"- **Real-World Generalization ({real_results['overall_accuracy']*100:.1f}%):** On genuine photographic images sourced from Unsplash, performance shows a slight domain shift. Real-world scene textures, natural high dynamic ranges, and organic lens blur introduce complex edge frequencies that differ from synthetic noise profiles.\n\n")
         
         f.write("## 4. Per-Class Error Analysis (Overexposure Focus)\n\n")
         f.write("An in-depth inspection of predictions on the real-world holdout dataset reveals that **Overexposure** is the weakest performing category (Recall: 54.4%, F1: 70.5%):\n\n")
@@ -235,7 +235,7 @@ def run_evaluation():
         f.write("| --- | --- | --- | --- |\n")
         for cb in real_calib:
             f.write(f"| **{cb['bucket_name']}** | {cb['sample_count']} | {cb['avg_confidence']*100:.1f}% | {cb['empirical_accuracy']*100:.1f}% |\n")
-        f.write(r"\n*Conclusion:* Model confidence exhibits strong monotonic calibration — high-confidence predictions (>= 85%) correlate with 90%+ empirical accuracy, confirming that raw probability outputs provide reliable risk assessment for human reviewers.\n")
+        f.write("\n*Conclusion:* Model confidence exhibits strong monotonic calibration — high-confidence predictions (>= 85%) correlate with 90%+ empirical accuracy, confirming that raw probability outputs provide reliable risk assessment for human reviewers.\n")
 
     print(f"\nEvaluation complete! Outputs written to {EVAL_DIR}")
 

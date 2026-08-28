@@ -455,7 +455,7 @@ export default function App() {
 
             <h3 style={{ color: 'var(--text-primary)', marginTop: '1.25rem', marginBottom: '0.5rem' }}>Evaluation Summary</h3>
             <p>
-              Evaluated on both unseen synthetic test splits and real-world holdout photographs (Unsplash/COCO).
+              Evaluated on both unseen synthetic test splits and real-world holdout photographs (Unsplash).
               Achieves 92.38% synthetic test accuracy and 84.79% real-world holdout accuracy.
             </p>
           </div>
