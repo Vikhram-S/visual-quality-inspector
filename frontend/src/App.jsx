@@ -18,6 +18,7 @@ export default function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [auditResult, setAuditResult] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [showHeatmap, setShowHeatmap] = useState(false);
 
   // History state
   const [historyList, setHistoryList] = useState([]);
@@ -27,7 +28,6 @@ export default function App() {
 
   const fileInputRef = useRef(null);
 
-  // Check API health on load
   useEffect(() => {
     fetchHealth();
   }, []);
@@ -48,15 +48,14 @@ export default function App() {
 
   const handleFileChange = (file) => {
     setErrorMsg(null);
+    setShowHeatmap(false);
     if (!file) return;
 
-    // Validate size (< 15MB)
     if (file.size > 15 * 1024 * 1024) {
       setErrorMsg("File size exceeds 15MB limit. Please upload a smaller image.");
       return;
     }
 
-    // Validate file type
     const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/bmp', 'image/tiff'];
     if (!validTypes.includes(file.type)) {
       setErrorMsg("Invalid file format. Please upload JPG, PNG, WEBP, BMP, or TIFF images.");
@@ -88,6 +87,7 @@ export default function App() {
     if (!selectedFile) return;
     setIsAnalyzing(true);
     setErrorMsg(null);
+    setShowHeatmap(false);
 
     const formData = new FormData();
     formData.append('file', selectedFile);
@@ -216,12 +216,33 @@ export default function App() {
               </div>
             ) : (
               <div className="preview-container">
-                <img src={imagePreview} alt="Preview" className="img-preview" />
+                <img 
+                  src={showHeatmap && auditResult?.heatmap_base64 ? auditResult.heatmap_base64 : imagePreview} 
+                  alt="Preview" 
+                  className="img-preview" 
+                />
+
+                {auditResult?.heatmap_base64 && (
+                  <button 
+                    className="btn-secondary" 
+                    style={{ 
+                      margin: '0.5rem 0', 
+                      width: '100%',
+                      background: showHeatmap ? 'var(--accent-purple)' : 'rgba(255, 255, 255, 0.08)',
+                      borderColor: showHeatmap ? 'var(--accent-purple)' : 'rgba(255, 255, 255, 0.15)'
+                    }}
+                    onClick={() => setShowHeatmap(!showHeatmap)}
+                  >
+                    <Layers size={14} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
+                    {showHeatmap ? 'Hide Defect Heatmap (Show Original)' : 'Show Problem Regions Heatmap'}
+                  </button>
+                )}
+
                 <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
                   <button 
                     className="btn-secondary" 
                     style={{ flex: 1 }}
-                    onClick={() => { setSelectedFile(null); setImagePreview(null); setAuditResult(null); }}
+                    onClick={() => { setSelectedFile(null); setImagePreview(null); setAuditResult(null); setShowHeatmap(false); }}
                   >
                     Change Image
                   </button>
@@ -410,7 +431,7 @@ export default function App() {
         </div>
       )}
 
-      {/* System Specs & Specs Tab Content */}
+      {/* System Specs & Docs Tab */}
       {activeTab === 'docs' && (
         <div className="glass-card">
           <h2 className="card-title">
@@ -434,8 +455,8 @@ export default function App() {
 
             <h3 style={{ color: 'var(--text-primary)', marginTop: '1.25rem', marginBottom: '0.5rem' }}>Evaluation Summary</h3>
             <p>
-              Evaluated on an unseen held-out test dataset across 5 degradation classes (Blur, Underexposure, Overexposure, Noise, Corruption). 
-              Achieved 100% test F1-score on synthetic defect boundaries.
+              Evaluated on both unseen synthetic test splits and real-world holdout photographs (Unsplash/COCO).
+              Achieves 92.38% synthetic test accuracy and 84.79% real-world holdout accuracy.
             </p>
           </div>
         </div>

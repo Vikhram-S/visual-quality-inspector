@@ -3,6 +3,7 @@ import numpy as np
 from PIL import Image
 import io
 import math
+import base64
 
 def estimate_noise_fast(gray):
     """
@@ -27,15 +28,12 @@ def calculate_blockiness_index(gray):
         return 0.0
     
     gray_f = gray.astype(np.float32)
-    # Vertical block boundaries (columns at 8, 16, 24...)
     v_diff = np.abs(gray_f[:, 7:-1:8] - gray_f[:, 8::8])
     v_mean_block_diff = np.mean(v_diff)
     
-    # Non-boundary differences
     v_non_diff = np.abs(gray_f[:, 3:-1:8] - gray_f[:, 4::8])
     v_mean_non_diff = np.mean(v_non_diff) + 1e-5
     
-    # Horizontal block boundaries
     h_diff = np.abs(gray_f[7:-1:8, :] - gray_f[8::8, :])
     h_mean_block_diff = np.mean(h_diff)
     
@@ -58,8 +56,6 @@ def extract_features_from_array(img_bgr):
     Extracts numerical quality features from an OpenCV BGR numpy image array.
     Returns a dictionary of feature names -> float values.
     """
-    features = {}
-
     if img_bgr is None or img_bgr.size == 0:
         return {
             "laplacian_var": 0.0,
@@ -80,30 +76,27 @@ def extract_features_from_array(img_bgr):
             "is_valid_format": 0.0
         }
 
+    features = {}
     gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
     hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
     
     features["is_valid_format"] = 1.0
 
     # 1. SHARPNESS
-    # A. Variance of Laplacian
     laplacian = cv2.Laplacian(gray, cv2.CV_64F)
     features["laplacian_var"] = float(laplacian.var())
 
-    # B. Tenengrad gradient magnitude
     sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
     sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
     tenengrad = np.mean(sobelx**2 + sobely**2)
     features["tenengrad_val"] = float(tenengrad)
 
-    # C. FFT High Frequency Ratio
     h, w = gray.shape
     cy, cx = h // 2, w // 2
     f = np.fft.fft2(gray)
     fshift = np.fft.fftshift(f)
     magnitude_spectrum = 20 * np.log(np.abs(fshift) + 1e-8)
     
-    # Mask out center (low frequencies)
     radius = min(h, w) // 8
     y, x = np.ogrid[:h, :w]
     mask = (x - cx)**2 + (y - cy)**2 > radius**2
@@ -167,6 +160,72 @@ def extract_features_from_file(file_path: str):
         res["is_valid_format"] = 0.0
         return res
     return extract_features_from_array(img_bgr)
+
+def generate_defect_heatmap(image_bytes: bytes, grid_cols=8, grid_rows=8):
+    """
+    Computes local sharpness/exposure/noise heatmaps across an 8x8 grid.
+    Returns:
+      1. Base64-encoded PNG image with semi-transparent color overlay (Red=Defect, Green=Pristine)
+      2. Grid array of patch scores for UI rendering.
+    """
+    try:
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        img_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img_bgr is None:
+            return None, None
+
+        h, w, _ = img_bgr.shape
+        cell_h = max(1, h // grid_rows)
+        cell_w = max(1, w // grid_cols)
+
+        gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+        overlay = img_bgr.copy()
+        
+        grid_data = []
+
+        for r in range(grid_rows):
+            row_cells = []
+            for c in range(grid_cols):
+                y1, y2 = r * cell_h, min(h, (r + 1) * cell_h)
+                x1, x2 = c * cell_w, min(w, (c + 1) * cell_w)
+                
+                patch = gray[y1:y2, x1:x2]
+                if patch.size == 0:
+                    continue
+
+                lap_var = float(cv2.Laplacian(patch, cv2.CV_64F).var())
+                mean_lum = float(np.mean(patch))
+                
+                sharp_score = min(100.0, (lap_var / 120.0) * 100.0)
+                exp_penalty = max(0.0, abs(mean_lum - 128.0) - 40.0)
+                patch_score = max(0.0, min(100.0, sharp_score - exp_penalty))
+
+                row_cells.append({
+                    "row": r, "col": c,
+                    "score": round(patch_score, 1),
+                    "laplacian_var": round(lap_var, 1),
+                    "mean_luminance": round(mean_lum, 1)
+                })
+
+                if patch_score < 45.0:
+                    color = (0, 0, 220)    # Red
+                elif patch_score < 70.0:
+                    color = (0, 215, 255)  # Yellow
+                else:
+                    color = (0, 200, 0)    # Green
+
+                cv2.rectangle(overlay, (x1, y1), (x2, y2), color, -1)
+                cv2.rectangle(overlay, (x1, y1), (x2, y2), (40, 40, 40), 1)
+
+            grid_data.append(row_cells)
+
+        blended = cv2.addWeighted(overlay, 0.40, img_bgr, 0.60, 0)
+        _, buffer = cv2.imencode('.png', blended)
+        heatmap_base64 = "data:image/png;base64," + base64.b64encode(buffer).decode('utf-8')
+
+        return heatmap_base64, grid_data
+    except Exception:
+        return None, None
 
 FEATURE_NAMES = [
     "laplacian_var", "tenengrad_val", "fft_blur_ratio",

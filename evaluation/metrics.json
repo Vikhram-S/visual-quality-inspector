@@ -1,38 +1,4 @@
 {
-  "num_test_samples": 320,
-  "overall_accuracy": 1.0,
-  "per_issue_metrics": {
-    "blur": {
-      "accuracy": 1.0,
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1_score": 1.0
-    },
-    "underexposed": {
-      "accuracy": 1.0,
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1_score": 1.0
-    },
-    "overexposed": {
-      "accuracy": 1.0,
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1_score": 1.0
-    },
-    "noise": {
-      "accuracy": 1.0,
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1_score": 1.0
-    },
-    "corrupted": {
-      "accuracy": 1.0,
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1_score": 1.0
-    }
-  },
   "categories": [
     "clean",
     "blur",
@@ -41,54 +7,176 @@
     "noise",
     "corrupted"
   ],
-  "confusion_matrix": [
-    [
-      20,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      60,
-      0,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      60,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      60,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      0,
-      60,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      0,
-      0,
-      60
+  "synthetic_test_metrics": {
+    "num_samples": 800,
+    "overall_accuracy": 0.92375,
+    "per_issue_metrics": {
+      "blur": {
+        "accuracy": 0.9875,
+        "precision": 0.9929577464788732,
+        "recall": 0.94,
+        "f1_score": 0.9657534246575342
+      },
+      "underexposed": {
+        "accuracy": 0.98625,
+        "precision": 1.0,
+        "recall": 0.9266666666666666,
+        "f1_score": 0.9619377162629758
+      },
+      "overexposed": {
+        "accuracy": 0.9875,
+        "precision": 1.0,
+        "recall": 0.9333333333333333,
+        "f1_score": 0.9655172413793104
+      },
+      "noise": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "corrupted": {
+        "accuracy": 0.98375,
+        "precision": 0.9202453987730062,
+        "recall": 1.0,
+        "f1_score": 0.9584664536741214
+      }
+    },
+    "confusion_matrix": [
+      [
+        28,
+        0,
+        4,
+        0,
+        4,
+        14
+      ],
+      [
+        1,
+        137,
+        0,
+        0,
+        12,
+        0
+      ],
+      [
+        1,
+        0,
+        144,
+        0,
+        4,
+        1
+      ],
+      [
+        8,
+        0,
+        6,
+        136,
+        0,
+        0
+      ],
+      [
+        1,
+        0,
+        0,
+        0,
+        149,
+        0
+      ],
+      [
+        0,
+        0,
+        2,
+        3,
+        0,
+        145
+      ]
     ]
-  ]
+  },
+  "real_holdout_metrics": {
+    "num_samples": 480,
+    "overall_accuracy": 0.8479166666666667,
+    "per_issue_metrics": {
+      "blur": {
+        "accuracy": 0.9895833333333334,
+        "precision": 0.9775280898876404,
+        "recall": 0.9666666666666667,
+        "f1_score": 0.9720670391061452
+      },
+      "underexposed": {
+        "accuracy": 0.93125,
+        "precision": 0.7714285714285715,
+        "recall": 0.9,
+        "f1_score": 0.8307692307692308
+      },
+      "overexposed": {
+        "accuracy": 0.9145833333333333,
+        "precision": 1.0,
+        "recall": 0.5444444444444444,
+        "f1_score": 0.7050359712230215
+      },
+      "noise": {
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+      },
+      "corrupted": {
+        "accuracy": 0.98125,
+        "precision": 1.0,
+        "recall": 0.9,
+        "f1_score": 0.9473684210526315
+      }
+    },
+    "confusion_matrix": [
+      [
+        17,
+        6,
+        6,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        87,
+        3,
+        0,
+        0,
+        0
+      ],
+      [
+        4,
+        4,
+        82,
+        0,
+        0,
+        0
+      ],
+      [
+        17,
+        1,
+        1,
+        71,
+        0,
+        0
+      ],
+      [
+        11,
+        0,
+        2,
+        0,
+        77,
+        0
+      ],
+      [
+        0,
+        0,
+        16,
+        1,
+        0,
+        73
+      ]
+    ]
+  }
 }

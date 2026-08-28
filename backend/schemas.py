@@ -15,6 +15,8 @@ class AnalysisResponse(BaseModel):
     image_stats: Dict[str, float]
     explanation: str
     created_at: str
+    heatmap_base64: Optional[str] = None
+    heatmap_grid: Optional[Any] = None
 
 class PaginatedAnalysisResponse(BaseModel):
     total: int

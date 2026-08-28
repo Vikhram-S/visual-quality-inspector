@@ -17,6 +17,7 @@ from backend.database import Base, engine, get_db
 from backend.models import AnalysisRecord
 from backend.schemas import AnalysisResponse, PaginatedAnalysisResponse, HealthResponse
 from backend.ml_engine import ml_engine
+from ml.feature_extractor import generate_defect_heatmap
 
 # Initialize Database tables
 Base.metadata.create_all(bind=engine)
@@ -60,11 +61,10 @@ MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024  # 15 MB
 async def analyze_image(file: UploadFile = File(...), db: Session = Depends(get_db)):
     """
     Accepts an uploaded image, validates format/size, extracts quality features,
-    runs defect detection inference, persists result in SQLite, and returns structured result.
+    runs defect detection inference, computes defect heatmap, persists result in SQLite, and returns structured result.
     """
-    # 1. Content-Type Pre-validation
+    # 1. Content-Type & Extension Pre-validation
     if file.content_type and file.content_type.lower() not in ALLOWED_MIME_TYPES:
-        # Fallback check extension if content-type is generic octet-stream
         ext = os.path.splitext(file.filename)[1].lower()
         if ext not in [".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"]:
             raise HTTPException(
@@ -95,7 +95,7 @@ async def analyze_image(file: UploadFile = File(...), db: Session = Depends(get_
     with open(saved_file_path, "wb") as f:
         f.write(image_bytes)
 
-    # 4. Run Analysis Pipeline
+    # 4. Run Analysis Pipeline & Heatmap Generation
     analysis_result = ml_engine.analyze_image_bytes(image_bytes)
 
     # 5. Persist to Database
@@ -124,7 +124,9 @@ async def analyze_image(file: UploadFile = File(...), db: Session = Depends(get_
         "issues": analysis_result["issues"],
         "image_stats": analysis_result["image_stats"],
         "explanation": record.explanation,
-        "created_at": created_at_dt.isoformat()
+        "created_at": created_at_dt.isoformat(),
+        "heatmap_base64": analysis_result.get("heatmap_base64"),
+        "heatmap_grid": analysis_result.get("heatmap_grid")
     }
 
 @app.get("/api/analyses", response_model=PaginatedAnalysisResponse)
@@ -147,7 +149,9 @@ def list_analyses(
             "issues": json.loads(r.issues_json),
             "image_stats": json.loads(r.image_stats_json),
             "explanation": r.explanation,
-            "created_at": r.created_at.isoformat()
+            "created_at": r.created_at.isoformat(),
+            "heatmap_base64": None,
+            "heatmap_grid": None
         })
 
     return {
@@ -163,6 +167,15 @@ def get_analysis(record_id: str, db: Session = Depends(get_db)):
     if not record:
         raise HTTPException(status_code=404, detail="Analysis record not found.")
 
+    heatmap_b64, heatmap_g = None, None
+    if os.path.exists(record.file_path):
+        try:
+            with open(record.file_path, "rb") as f:
+                b = f.read()
+                heatmap_b64, heatmap_g = generate_defect_heatmap(b)
+        except Exception:
+            pass
+
     return {
         "id": record.id,
         "filename": record.filename,
@@ -171,7 +184,9 @@ def get_analysis(record_id: str, db: Session = Depends(get_db)):
         "issues": json.loads(record.issues_json),
         "image_stats": json.loads(record.image_stats_json),
         "explanation": record.explanation,
-        "created_at": record.created_at.isoformat()
+        "created_at": record.created_at.isoformat(),
+        "heatmap_base64": heatmap_b64,
+        "heatmap_grid": heatmap_g
     }
 
 @app.get("/api/images/{record_id}")
