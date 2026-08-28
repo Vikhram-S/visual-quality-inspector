@@ -1,5 +1,10 @@
 # Image Quality and Defect Detection System
 
+[![CI](https://github.com/Vikhram-S/visual-quality-inspector/actions/workflows/ci.yml/badge.svg)](https://github.com/Vikhram-S/visual-quality-inspector/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/)
+[![Node 20](https://img.shields.io/badge/node-20.x-green.svg)](https://nodejs.org/)
+
 A full-stack AI-powered application for automated image quality assessment, defect classification, and spatial defect localization. Built to run on CPU-only, low-resource hardware, with no dependency on external AI or vision APIs.
 
 ---
@@ -158,5 +163,7 @@ Model performance is reported on two independent datasets to eliminate data leak
 ---
 
 ## License and Attribution
+
+This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
 
 Real-world holdout images sourced from Unsplash, used under the Unsplash license (free to use, attribution not required).
