@@ -3,6 +3,7 @@ import sys
 import uuid
 import json
 import datetime
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -26,10 +27,17 @@ Base.metadata.create_all(bind=engine)
 UPLOAD_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "uploads"))
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Loads ML model ONCE at server startup."""
+    ml_engine.load_model()
+    yield
+
 app = FastAPI(
     title="Image Quality & Defect Detection API",
     description="Full-stack automated visual defect detection & explainable image quality scoring service.",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Enable CORS for frontend development
@@ -41,17 +49,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-def startup_event():
-    """Loads ML model ONCE at server startup."""
-    ml_engine.load_model()
-
 @app.get("/api/health", response_model=HealthResponse)
 def health_check():
     return {
         "status": "ok",
         "model_loaded": ml_engine.is_loaded,
-        "timestamp": datetime.datetime.utcnow().isoformat()
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()
     }
 
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp", "image/bmp", "image/tiff"}
@@ -82,7 +85,7 @@ async def analyze_image(file: UploadFile = File(...), db: Session = Depends(get_
     
     if len(image_bytes) > MAX_FILE_SIZE_BYTES:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=getattr(status, "HTTP_413_CONTENT_TOO_LARGE", 413),
             detail="File size exceeds maximum limit of 15MB."
         )
 
@@ -99,7 +102,7 @@ async def analyze_image(file: UploadFile = File(...), db: Session = Depends(get_
     analysis_result = ml_engine.analyze_image_bytes(image_bytes)
 
     # 5. Persist to Database
-    created_at_dt = datetime.datetime.utcnow()
+    created_at_dt = datetime.datetime.now(datetime.timezone.utc)
     record = AnalysisRecord(
         id=record_id,
         filename=file.filename,

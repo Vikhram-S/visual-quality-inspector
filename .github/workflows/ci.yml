@@ -1,13 +1,16 @@
-name: Continuous Integration & Verification Pipeline
+name: Continuous Integration & Quality Verification Pipeline
 
 on:
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
-  test-and-build:
+  # Fast CI Test & Build Pipeline (Network-independent, < 2 minutes)
+  fast-ci:
+    name: Fast Verification & Build
     runs-on: ubuntu-latest
 
     steps:
@@ -20,25 +23,13 @@ jobs:
           python-version: "3.11"
           cache: 'pip'
 
-      - name: Install Backend & ML Dependencies
+      - name: Install Backend & Test Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest httpx
 
-      - name: Generate Procedural & Holdout Datasets
-        run: |
-          python ml/generate_dataset.py
-
-      - name: Train ML Defect Classifier Ensemble
-        run: |
-          python ml/train.py
-
-      - name: Evaluate Model Generalization (Synthetic & Holdout)
-        run: |
-          python ml/evaluate.py
-
-      - name: Run Backend Pytest Suite
+      - name: Run Backend Pytest Suite (Fast In-Memory / SQLite)
         run: |
           python -m pytest backend/tests
 
@@ -54,7 +45,7 @@ jobs:
         run: |
           npm ci || npm install
 
-      - name: Run Frontend Vitest Test Suite
+      - name: Run Frontend Vitest Suite
         working-directory: ./frontend
         run: |
           npm test
@@ -63,3 +54,36 @@ jobs:
         working-directory: ./frontend
         run: |
           npm run build
+
+  # Full ML Retraining & Evaluation Pipeline (Triggered manually or on ml/ changes)
+  ml-evaluation:
+    name: ML Model Retraining & Evaluation Pass
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (contains(github.event.head_commit.message, '[ml-train]') || contains(github.event.head_commit.message, '[full-ci]')))
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Install ML Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate Procedural & Holdout Datasets
+        run: |
+          python ml/generate_dataset.py
+
+      - name: Train Ensemble Models
+        run: |
+          python ml/train.py
+
+      - name: Evaluate Model Performance (Synthetic & Real Holdout)
+        run: |
+          python ml/evaluate.py

@@ -11,7 +11,7 @@ This project addresses visual defect classification (Blur, Underexposure, Overex
 - **Hybrid Classical CV + Learned Ensemble:** Uses OpenCV to extract engineered quality features (Laplacian variance, Tenengrad magnitude, FFT blur ratios, shadow/highlight clipping %, noise residual variance, Immerkaer noise estimation, and 8x8 DCT blockiness index).
 - **ML-First Inference:** Trains a Random Forest multi-issue ensemble + Gradient Boosting overall classifier on top of extracted feature vectors. Model footprint is **< 3 MB** and executes inference in **< 15ms per image** on CPU.
 - **Explainable AI & Spatial Heatmaps:** Provides human-readable decision rationales alongside an 8x8 spatial defect localization heatmap overlaying low-quality image regions.
-- **Leakage-Free Multi-Distribution Evaluation:** Evaluates model performance across both unseen synthetic test splits and an independent real-world photographic holdout dataset.
+- **Leakage-Free Multi-Distribution Evaluation:** Evaluates model performance across both unseen synthetic test splits and an independent real-world photographic holdout dataset cached locally in the repository.
 
 ---
 
@@ -78,11 +78,6 @@ The inference engine (`backend/ml_engine.py`) follows a **Hybrid ML-First + Safe
 # Install backend Python dependencies
 pip install -r requirements.txt
 
-# (Optional) Generate procedural dataset, train ensemble, and run evaluation
-python ml/generate_dataset.py
-python ml/train.py
-python ml/evaluate.py
-
 # Start FastAPI backend server
 python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
@@ -113,17 +108,34 @@ docker compose up --build -d
 
 ---
 
+## 🔁 How to Reproduce Our Exact Evaluation Numbers
+
+To reproduce the exact evaluation metrics (`metrics.json` and `evaluation_report.md`) from a clean offline clone without requiring internet access:
+
+```bash
+# Step 1: Generate procedural splits & load committed real-world source photos
+python ml/generate_dataset.py
+
+# Step 2: Train Random Forest classifiers & overall ensemble
+python ml/train.py
+
+# Step 3: Run comprehensive dual-distribution evaluation
+python ml/evaluate.py
+```
+
+*Note on Data Provenance:* The 30 clean base photographs for the real-world holdout dataset are committed directly to `ml/dataset/real_holdout_source/` (sourced from Unsplash, free to use per the Unsplash license). This ensures dataset generation executes deterministically offline without silent network fallbacks.
+
+---
+
 ## 🧪 Automated Testing Suite
 
 ### Backend Pytest Suite
 ```bash
-# Run backend API & ML engine test cases
 python -m pytest backend/tests
 ```
 
 ### Frontend Vitest Suite
 ```bash
-# Run frontend React component unit tests
 cd frontend
 npm test
 ```
@@ -135,7 +147,7 @@ npm test
 The system is evaluated across two distinct datasets to eliminate data leakage and assess genuine domain generalization:
 
 1. **Unseen Synthetic Test Split (800 samples):** Generated using separate random seed ranges (`5000+`) across 20 distinct procedural base pattern families.
-2. **Real-World Holdout Set (480 samples):** Real photographs sourced from public datasets (Unsplash/COCO) subjected to physical degradations.
+2. **Real-World Holdout Set (480 samples):** Real photographs sourced from Unsplash subjected to controlled degradations.
 
 ### Generalization Metrics Summary
 
@@ -147,16 +159,17 @@ The system is evaluated across two distinct datasets to eliminate data leakage a
 | **Noise** | 100.0% | 100.0% | 100.0% | 100.0% |
 | **Corruption / Blockiness** | 98.4% | 95.8% | 98.1% | 94.7% |
 
-- **Overall Synthetic Test Accuracy:** **92.38%**
-- **Overall Real-World Holdout Accuracy:** **84.79%**
+- **Overall Synthetic Test Accuracy:** **92.38%** (800 samples)
+- **Overall Real-World Holdout Accuracy:** **85.00%** (480 samples)
+- **Real-World Dataset Provenance:** **30/30 genuine photographs** (0 synthetic fallbacks)
 
 ---
 
 ## ⚠️ Known Limitations & Honesty Note
 
 1. **Synthetic-to-Real Domain Gap:**
-   Model accuracy on synthetic test splits (**92.38%**) exceeds accuracy on real photographic holdouts (**84.79%**). Procedural data generation provides exact ground-truth boundaries, whereas real photographs feature complex scene textures, organic shadows, and non-uniform lens aberrations that create feature distribution shifts.
-2. **High-Frequency Background Textures:**
+   Model accuracy on synthetic test splits (**92.38%**) exceeds accuracy on real photographic holdouts (**85.00%**). Procedural data generation provides exact ground-truth boundaries, whereas real photographs feature complex scene textures, organic shadows, and non-uniform lens aberrations that create feature distribution shifts.
+2. **Per-Class Error Analysis (Overexposure):**
+   Real photographic scenes containing bright background skies or specular reflections introduce high mean luminance without highlight clipping. When subjected to light overexposure, feature overlap occurs with clean photographic scenes.
+3. **High-Frequency Background Textures:**
    Dense photographic elements (such as foliage or architectural brickwork) introduce high spatial variance in raw Laplacian calculations, requiring the ML classifier probability ($P_{ml} \ge 0.50$) to filter false positive blur calls.
-3. **Specular Highlight Sensitivity:**
-   Natural high dynamic range scenes (e.g. sunsets or direct specular light reflections) contain localized blown-out white regions ($> 240$ luminance) which can trigger overexposure warnings if highlight clipping exceeds thresholds.

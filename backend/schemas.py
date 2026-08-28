@@ -2,15 +2,15 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 
 class IssueItem(BaseModel):
-    type: str = Field(..., example="noise")
-    severity: str = Field(..., example="low")  # "low", "medium", "high"
-    confidence: float = Field(..., example=0.71)
+    type: str = Field(..., json_schema_extra={"example": "noise"})
+    severity: str = Field(..., json_schema_extra={"example": "low"})  # "low", "medium", "high"
+    confidence: float = Field(..., json_schema_extra={"example": 0.71})
 
 class AnalysisResponse(BaseModel):
     id: str
     filename: str
-    quality_score: float = Field(..., example=82.0)
-    quality_label: str = Field(..., example="ACCEPTABLE")
+    quality_score: float = Field(..., json_schema_extra={"example": 82.0})
+    quality_label: str = Field(..., json_schema_extra={"example": "ACCEPTABLE"})
     issues: List[IssueItem]
     image_stats: Dict[str, float]
     explanation: str

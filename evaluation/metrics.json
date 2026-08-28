@@ -7,6 +7,7 @@
     "noise",
     "corrupted"
   ],
+  "provenance": "30/30 genuine photos, 0/30 synthetic fallback",
   "synthetic_test_metrics": {
     "num_samples": 800,
     "overall_accuracy": 0.92375,
@@ -95,13 +96,13 @@
   },
   "real_holdout_metrics": {
     "num_samples": 480,
-    "overall_accuracy": 0.8479166666666667,
+    "overall_accuracy": 0.85,
     "per_issue_metrics": {
       "blur": {
-        "accuracy": 0.9895833333333334,
-        "precision": 0.9775280898876404,
+        "accuracy": 0.9916666666666667,
+        "precision": 0.9886363636363636,
         "recall": 0.9666666666666667,
-        "f1_score": 0.9720670391061452
+        "f1_score": 0.9775280898876404
       },
       "underexposed": {
         "accuracy": 0.93125,
@@ -110,10 +111,10 @@
         "f1_score": 0.8307692307692308
       },
       "overexposed": {
-        "accuracy": 0.9145833333333333,
+        "accuracy": 0.9083333333333333,
         "precision": 1.0,
-        "recall": 0.5444444444444444,
-        "f1_score": 0.7050359712230215
+        "recall": 0.5111111111111111,
+        "f1_score": 0.6764705882352942
       },
       "noise": {
         "accuracy": 1.0,
@@ -122,16 +123,16 @@
         "f1_score": 1.0
       },
       "corrupted": {
-        "accuracy": 0.98125,
+        "accuracy": 0.9833333333333333,
         "precision": 1.0,
-        "recall": 0.9,
-        "f1_score": 0.9473684210526315
+        "recall": 0.9111111111111111,
+        "f1_score": 0.9534883720930233
       }
     },
     "confusion_matrix": [
       [
-        17,
-        6,
+        16,
+        7,
         6,
         1,
         0,
@@ -154,29 +155,49 @@
         0
       ],
       [
+        15,
+        1,
+        1,
+        73,
+        0,
+        0
+      ],
+      [
+        9,
+        0,
+        3,
+        0,
+        78,
+        0
+      ],
+      [
+        0,
+        0,
         17,
         1,
-        1,
-        71,
         0,
-        0
-      ],
-      [
-        11,
-        0,
-        2,
-        0,
-        77,
-        0
-      ],
-      [
-        0,
-        0,
-        16,
-        1,
-        0,
-        73
+        72
       ]
+    ],
+    "confidence_calibration": [
+      {
+        "bucket_name": "High Confidence [0.85 - 1.00]",
+        "sample_count": 414,
+        "avg_confidence": 0.99,
+        "empirical_accuracy": 0.923
+      },
+      {
+        "bucket_name": "Moderate Confidence [0.70 - 0.85)",
+        "sample_count": 17,
+        "avg_confidence": 0.779,
+        "empirical_accuracy": 0.471
+      },
+      {
+        "bucket_name": "Low Confidence [0.50 - 0.70)",
+        "sample_count": 41,
+        "avg_confidence": 0.606,
+        "empirical_accuracy": 0.39
+      }
     ]
   }
 }

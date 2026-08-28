@@ -50,4 +50,5 @@ Thumbs.db
 .idea/
 
 # Generated dataset (re-creatable with ml/generate_dataset.py)
-ml/dataset/
+ml/dataset/*
+!ml/dataset/real_holdout_source/
