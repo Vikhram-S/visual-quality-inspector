@@ -102,6 +102,69 @@ Note: the Docker configuration has been manually reviewed for correctness (base 
 
 ---
 
+## Database Setup
+
+1. **Default Database & Persistence.** The backend uses SQLite via SQLAlchemy (`backend/database.py`). It requires no manual installation or database creation step — on the first run of the application, SQLite automatically creates the database file at `./data.db` relative to the backend working directory (or inside `/app/data/data.db` in Docker).
+2. **Environment Variable Configuration.** The database connection is configured via the `DATABASE_URL` environment variable (defaulting to `sqlite:///./data.db`). To use an external database such as PostgreSQL, set `DATABASE_URL` in your environment before launching the server:
+```bash
+DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+```
+3. **Docker Persistence.** In Docker Compose (`docker-compose.yml`), `DATABASE_URL` is set to `sqlite:////app/data/data.db`. Database persistence across container restarts is guaranteed by mounting the named volume `app_data` to `/app/data`. Uploaded media files are similarly persisted via the `app_uploads` volume mounted to `/app/backend/uploads`.
+4. **Automated Table Schema Initialization.** No manual database migration or schema setup script is required. Tables are auto-created on application startup via SQLAlchemy's `Base.metadata.create_all(bind=engine)` inside `backend/main.py`.
+
+---
+
+## API Usage Examples
+
+The REST API exposes key endpoints for system status checks, image quality analysis, and historical result retrieval.
+
+### 1. Health Check
+```bash
+curl http://127.0.0.1:8000/api/health
+```
+
+### 2. Analyze an Image
+```bash
+curl -X POST http://127.0.0.1:8000/api/analyze \
+  -F "file=@sample_images/sample_blur.jpg"
+```
+
+**Example JSON Response:**
+```json
+{
+  "id": "5dc58064-070a-47b8-813e-60935f79fa7b",
+  "filename": "sample_blur.jpg",
+  "quality_score": 65.0,
+  "quality_label": "DEFECTIVE",
+  "issues": [
+    {
+      "type": "blur",
+      "severity": "high",
+      "confidence": 0.9
+    }
+  ],
+  "image_stats": {
+    "is_valid_format": 1.0,
+    "laplacian_var": 8.35,
+    "tenengrad_val": 1209.08,
+    "fft_blur_ratio": 0.96,
+    "mean_luminance": 209.52,
+    "std_luminance": 31.57,
+    "noise_variance": 1.55,
+    "blockiness_index": 1.18
+  },
+  "explanation": "Blur detected: ML Blur Probability = 89.8%, Laplacian variance = 8.4.",
+  "created_at": "2026-08-28T09:45:30.896144"
+}
+```
+
+### 3. Retrieve Analysis History
+```bash
+curl http://127.0.0.1:8000/api/analyses?page=1&limit=10
+```
+
+---
+
 ## Reproducing the Reported Evaluation Results
 
 The evaluation metrics in `metrics.json` and `evaluation_report.md` can be reproduced from a clean clone without internet access:
