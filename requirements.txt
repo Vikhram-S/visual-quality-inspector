@@ -1,0 +1,4 @@
+# Root-level requirements file — re-exports backend dependencies
+# This file exists so that `pip install -r requirements.txt` works from the project root
+# (used by CI, README quickstart, and local development)
+-r backend/requirements.txt
